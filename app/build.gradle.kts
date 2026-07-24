@@ -1,15 +1,13 @@
 plugins {
     id(Plugin.androidApplication)
     id(Plugin.kotlinCompose)
+    id(Plugin.hilt)
+    id(Plugin.ksp)
 }
 
 android {
     namespace = Apps.applicationId
-    compileSdk {
-        version = release(Apps.compileSdk) {
-            minorApiLevel = Apps.compileSdkMinor
-        }
-    }
+    compileSdk = Apps.compileSdk
 
     defaultConfig {
         applicationId = Apps.applicationId
@@ -51,10 +49,23 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
+    }
+}
+
 dependencies {
+    implementation(libs.androidx.core.splashscreen)
     coreAndroidX()
     compose()
     composeDebug()
+    hilt()
+    navigationCompose()
+    room()
+    workManager()
+    coil()
+    dataStorePreferences()
     jUnit()
     androidxTest()
     composeAndroidTest()
