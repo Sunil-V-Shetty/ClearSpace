@@ -29,7 +29,6 @@ val LocalAppPermissionActions = compositionLocalOf<AppPermissionActions?> { null
 fun AppPermissionsHost(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val runtimePermissions = appRuntimePermissions()
-    var autoFlowStarted by rememberSaveable { mutableStateOf(false) }
 
     val fullAccessLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
@@ -41,25 +40,24 @@ fun AppPermissionsHost(content: @Composable () -> Unit) {
                 Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
                 "package:${context.packageName}".toUri(),
             )
-            fullAccessLauncher.launch(intent)
+            runCatching { fullAccessLauncher.launch(intent) }.onFailure {
+                context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    "package:${context.packageName}".toUri()))
+            }
+        } else {
+            context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                "package:${context.packageName}".toUri()))
         }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
-    ) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !canScanJunkFilesystem(context)) {
-            launchFullStorageAccessSettings()
-        }
-    }
+    ) { /* Permission-dependent screens refresh when resumed. */ }
 
     fun requestRuntimeThenFullAccessIfNeeded() {
         when {
             runtimePermissions.isNotEmpty() && !hasAppRuntimePermissions(context) -> {
                 permissionLauncher.launch(runtimePermissions)
-            }
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !canScanJunkFilesystem(context) -> {
-                launchFullStorageAccessSettings()
             }
         }
     }
@@ -68,12 +66,6 @@ fun AppPermissionsHost(content: @Composable () -> Unit) {
         requestAllPermissions = ::requestRuntimeThenFullAccessIfNeeded,
         openFullStorageAccessSettings = ::launchFullStorageAccessSettings,
     )
-
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        if (autoFlowStarted) return@LaunchedEffect
-        autoFlowStarted = true
-        requestRuntimeThenFullAccessIfNeeded()
-    }
 
     CompositionLocalProvider(LocalAppPermissionActions provides actions) {
         content()

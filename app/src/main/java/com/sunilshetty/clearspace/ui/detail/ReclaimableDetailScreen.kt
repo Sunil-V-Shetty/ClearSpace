@@ -5,8 +5,6 @@ import androidx.compose.ui.res.stringResource
 import com.sunilshetty.clearspace.R
 
 @Composable
-fun ReclaimableDetailScreen(onBack: () -> Unit) {
-    DetailScreenScaffold(titleRes = R.string.card_reclaimable, onBack = onBack) {
-        DetailBodyText(text = stringResource(R.string.card_reclaimable_empty))
-    }
+fun ReclaimableDetailScreen(onBack: () -> Unit, onNavigate: (String) -> Unit) {
+    CleanupOverviewScreen(R.string.card_reclaimable, onBack, onNavigate)
 }

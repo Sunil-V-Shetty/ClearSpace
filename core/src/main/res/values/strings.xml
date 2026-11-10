@@ -1,0 +1,5 @@
+<resources>
+    <string name="category_photos">Photos</string>
+    <string name="category_videos">Videos</string>
+    <string name="category_downloads">Downloads</string>
+</resources>

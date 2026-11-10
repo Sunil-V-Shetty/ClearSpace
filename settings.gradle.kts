@@ -24,3 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "ClearSpace"
 include(":app")
+include(":core")
+include(":design")

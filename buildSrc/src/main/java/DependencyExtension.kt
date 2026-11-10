@@ -79,7 +79,6 @@ fun DependencyHandler.workManager() {
 
 fun DependencyHandler.coil() {
     implementation(Dependencies.coilCompose)
-    implementation(Dependencies.coilGif)
 }
 
 fun DependencyHandler.dataStorePreferences() {

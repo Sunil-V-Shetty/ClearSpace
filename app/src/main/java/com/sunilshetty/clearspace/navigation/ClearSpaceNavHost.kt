@@ -89,10 +89,10 @@ fun ClearSpaceNavHost(
             )
         }
         detailComposable(Constants.Navigation.INSIGHTS) {
-            InsightsDetailScreen(onBack = { navController.popBackStack() })
+            InsightsDetailScreen(onBack = { navController.popBackStack() }, onNavigate = { navController.navigate(it) })
         }
         detailComposable(Constants.Navigation.RECLAIMABLE) {
-            ReclaimableDetailScreen(onBack = { navController.popBackStack() })
+            ReclaimableDetailScreen(onBack = { navController.popBackStack() }, onNavigate = { navController.navigate(it) })
         }
         detailComposable(Constants.Navigation.JUNK_FILES) {
             JunkFilesScreen(onBack = { navController.popBackStack() })
@@ -108,6 +108,9 @@ fun ClearSpaceNavHost(
         }
         detailComposable(Constants.Navigation.TRASH) {
             TrashScreen(onBack = { navController.popBackStack() })
+        }
+        detailComposable(Constants.Navigation.DIAGNOSTICS) {
+            com.sunilshetty.clearspace.ui.diagnostics.DiagnosticsScreen(onBack = { navController.popBackStack() })
         }
         categoryDetailRoute(navController, Constants.Navigation.CATEGORY_PHOTOS)
         categoryDetailRoute(navController, Constants.Navigation.CATEGORY_VIDEOS)

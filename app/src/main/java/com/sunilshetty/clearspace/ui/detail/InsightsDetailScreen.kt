@@ -5,8 +5,6 @@ import androidx.compose.ui.res.stringResource
 import com.sunilshetty.clearspace.R
 
 @Composable
-fun InsightsDetailScreen(onBack: () -> Unit) {
-    DetailScreenScaffold(titleRes = R.string.card_insights, onBack = onBack) {
-        DetailBodyText(text = stringResource(R.string.card_insights_empty))
-    }
+fun InsightsDetailScreen(onBack: () -> Unit, onNavigate: (String) -> Unit) {
+    CleanupOverviewScreen(R.string.card_insights, onBack, onNavigate)
 }

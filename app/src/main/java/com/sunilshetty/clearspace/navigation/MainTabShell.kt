@@ -4,8 +4,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.BuildCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -48,9 +49,9 @@ fun MainTabShell(
         bottomBar = {
             if (tabDestination != null) {
                 val navItemColors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.onSurface,
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                    indicatorColor = MaterialTheme.colorScheme.surfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -59,6 +60,7 @@ fun MainTabShell(
                     tonalElevation = 0.dp,
                 ) {
                     NavigationBarItem(
+                        modifier = Modifier.testTag("nav_home"),
                         selected = tabDestination.hierarchy.any {
                             it.route == Constants.Navigation.HOME
                         },
@@ -73,7 +75,7 @@ fun MainTabShell(
                         },
                         icon = {
                             Icon(
-                                imageVector = Icons.Outlined.Dashboard,
+                                imageVector = Icons.Outlined.CleaningServices,
                                 contentDescription = stringResource(R.string.nav_home),
                             )
                         },
@@ -81,6 +83,7 @@ fun MainTabShell(
                         colors = navItemColors,
                     )
                     NavigationBarItem(
+                        modifier = Modifier.testTag("nav_tools"),
                         selected = tabDestination.hierarchy.any {
                             it.route == Constants.Navigation.TOOLS
                         },
@@ -95,7 +98,7 @@ fun MainTabShell(
                         },
                         icon = {
                             Icon(
-                                imageVector = Icons.Outlined.GridView,
+                                imageVector = Icons.Outlined.BuildCircle,
                                 contentDescription = stringResource(R.string.nav_tools),
                             )
                         },

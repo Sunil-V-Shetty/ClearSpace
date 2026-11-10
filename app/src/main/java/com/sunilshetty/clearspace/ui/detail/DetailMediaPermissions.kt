@@ -37,19 +37,27 @@ internal fun junkReadPermissions(): Array<String> {
 }
 
 /** All runtime permissions requested once when the app opens. */
-internal fun appRuntimePermissions(): Array<String> = junkReadPermissions()
+internal fun appRuntimePermissions(): Array<String> = when {
+    Build.VERSION.SDK_INT >= 34 -> junkReadPermissions() + "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+    Build.VERSION.SDK_INT <= 28 -> junkReadPermissions() + Manifest.permission.WRITE_EXTERNAL_STORAGE
+    else -> junkReadPermissions()
+}
 
 internal fun hasAppRuntimePermissions(context: Context): Boolean {
     return hasAllPermissions(context, appRuntimePermissions())
 }
 
 internal fun hasMediaAccess(context: Context): Boolean {
-    return hasAllPermissions(context, mediaReadPermissions())
+    return canScanJunkFilesystem(context) || mediaReadPermissions().any {
+        ContextCompat.checkSelfPermission(context, it) == PermissionChecker.PERMISSION_GRANTED
+    } || (Build.VERSION.SDK_INT >= 34 && ContextCompat.checkSelfPermission(context,
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED") == PermissionChecker.PERMISSION_GRANTED)
 }
 
 internal fun hasJunkReadAccess(context: Context): Boolean {
     if (canScanJunkFilesystem(context)) return true
-    return hasAllPermissions(context, junkReadPermissions())
+    return hasMediaAccess(context) || (Build.VERSION.SDK_INT >= 33 &&
+        ContextCompat.checkSelfPermission(context, Api33Permissions.READ_MEDIA_AUDIO) == PermissionChecker.PERMISSION_GRANTED)
 }
 
 internal fun canScanJunkFilesystem(context: Context): Boolean {

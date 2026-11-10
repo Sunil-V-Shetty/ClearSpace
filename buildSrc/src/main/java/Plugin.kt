@@ -1,5 +1,6 @@
 object Plugin {
     const val androidApplication = "com.android.application"
+    const val androidLibrary = "com.android.library"
     const val kotlinCompose = "org.jetbrains.kotlin.plugin.compose"
     const val kotlinSerialization = "org.jetbrains.kotlin.plugin.serialization"
     const val hilt = "com.google.dagger.hilt.android"

@@ -24,9 +24,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -42,7 +48,7 @@ import com.sunilshetty.clearspace.ui.components.ClearSpacePrimaryButton
 import com.sunilshetty.clearspace.ui.components.ClearSpaceSelectionSummaryRow
 import com.sunilshetty.clearspace.ui.components.ClearSpaceSecondaryButton
 import com.sunilshetty.clearspace.ui.components.ClearSpaceTopAppBar
-import com.sunilshetty.clearspace.ui.components.InfinityLoaderGif
+import com.sunilshetty.clearspace.ui.components.ClearSpaceLoadingIndicator
 import com.sunilshetty.clearspace.ui.components.ClearSpaceWorkingOverlay
 import com.sunilshetty.clearspace.ui.components.clearSpaceBottomBarPadding
 import com.sunilshetty.clearspace.ui.components.rememberStorageFormatBytes
@@ -61,6 +67,14 @@ fun TrashScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val formatBytes = rememberStorageFormatBytes()
     val dateFormat = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    if (confirmDelete) {
+        AlertDialog(onDismissRequest = { confirmDelete = false },
+            title = { Text("Delete recovery copies forever?") },
+            text = { Text("Selected files cannot be restored after this action.") },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; viewModel.deleteForeverSelected() }) { Text("Delete forever") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } })
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -99,7 +113,7 @@ fun TrashScreen(
                         icon = Icons.Outlined.Restore,
                     )
                     ClearSpaceSecondaryButton(
-                        onClick = viewModel::deleteForeverSelected,
+                        onClick = { confirmDelete = true },
                         enabled = ready.selectedKeys.isNotEmpty() && !ready.isWorking,
                         label = stringResource(
                             R.string.trash_delete_forever_selected,
@@ -122,7 +136,7 @@ fun TrashScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        InfinityLoaderGif(size = 128.dp)
+                        ClearSpaceLoadingIndicator(size = 96.dp)
                         Text(
                             text = stringResource(R.string.trash_loading),
                             modifier = Modifier.padding(top = 12.dp),
@@ -232,7 +246,9 @@ private fun TrashItemRow(
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = { onCheckedChange() })
+        val selectionLabel = stringResource(R.string.select_file, item.displayName)
+        Checkbox(checked = checked, onCheckedChange = { onCheckedChange() },
+            modifier = Modifier.semantics { contentDescription = selectionLabel })
         Column(modifier = Modifier.weight(1f)) {
             Text(text = item.displayName, style = MaterialTheme.typography.bodyMedium)
             Text(

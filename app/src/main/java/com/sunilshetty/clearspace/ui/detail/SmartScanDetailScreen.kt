@@ -35,10 +35,10 @@ import com.sunilshetty.clearspace.ui.components.BentoStorageProgress
 import com.sunilshetty.clearspace.ui.components.BentoSubtleText
 import com.sunilshetty.clearspace.ui.components.BentoValue
 import com.sunilshetty.clearspace.ui.components.ClearSpaceTopAppBar
-import com.sunilshetty.clearspace.ui.components.CompleteGif
+import com.sunilshetty.clearspace.ui.components.ClearSpaceSuccessMark
 import com.sunilshetty.clearspace.ui.components.QuickScanPrimaryButton
 import com.sunilshetty.clearspace.ui.components.QuickScanSecondaryButton
-import com.sunilshetty.clearspace.ui.components.RocketStartupGif
+import com.sunilshetty.clearspace.ui.components.ClearSpaceLoadingIndicator
 import com.sunilshetty.clearspace.ui.components.clearSpaceBottomBarPadding
 import com.sunilshetty.clearspace.ui.components.rememberStorageFormatBytes
 import com.sunilshetty.clearspace.ui.components.rememberStorageFormatPercent
@@ -62,12 +62,8 @@ fun SmartScanDetailScreen(
     val formatPercent = rememberStorageFormatPercent()
 
     val runQuickScan: () -> Unit = {
-        if (mediaPermissions.isNotEmpty() && !hasMediaAccess(context)) {
-            permissionActions?.requestAllPermissions()
-        } else {
-            viewModel.updateMediaAccessGranted(hasMediaAccess(context))
-            viewModel.runQuickScan()
-        }
+        viewModel.updateMediaAccessGranted(hasMediaAccess(context))
+        viewModel.runQuickScan()
     }
 
     val successState = uiState as? HomeUiState.Success
@@ -177,7 +173,7 @@ private fun QuickScanCompleteContent(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center,
         ) {
-            CompleteGif(size = 200.dp)
+            ClearSpaceSuccessMark(size = 120.dp)
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
@@ -187,8 +183,8 @@ private fun QuickScanCompleteContent(
         )
         Text(
             text = stringResource(
-                R.string.quick_scan_optimized_percent,
-                result.optimizedPercent,
+                R.string.quick_scan_cache_result,
+                com.sunilshetty.clearspace.ui.components.rememberStorageFormatBytes()(result.cacheBytesCleared),
             ),
             style = MaterialTheme.typography.displaySmall,
             color = MaterialTheme.colorScheme.primary,
@@ -222,7 +218,7 @@ private fun QuickScanRunningContent(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center,
         ) {
-            RocketStartupGif(size = 200.dp)
+            ClearSpaceLoadingIndicator(size = 120.dp)
         }
         Spacer(modifier = Modifier.height(20.dp))
         Text(

@@ -38,10 +38,9 @@ class DuplicatesViewModel @Inject constructor(
     private var lastScanAccessGranted: Boolean = false
     private var scanInFlight: Boolean = false
 
-    private var postSystemDeleteDirect: List<JunkFileItem>? = null
-    private var pendingSystemDeleteBatches: ArrayDeque<List<JunkFileItem>> = ArrayDeque()
-    private var systemDeleteLauncher: ((PendingIntent) -> Unit)? = null
-    private var deleteFlowInFlight: Boolean = false
+    private val cleanup = com.sunilshetty.clearspace.ui.components.CleanupController()
+    private var deleteFlowInFlight = false
+    private var pendingMessage: String? = null
 
     init {
         loadDuplicates(force = true)
@@ -54,7 +53,7 @@ class DuplicatesViewModel @Inject constructor(
             System.currentTimeMillis() - lastScanAtEpochMs < SCAN_CACHE_TTL_MS &&
             _uiState.value is DuplicatesUiState.Ready
 
-        if (cacheFresh || scanInFlight) return
+        if (cacheFresh || scanInFlight || deleteFlowInFlight) return
 
         viewModelScope.launch {
             scanInFlight = true
@@ -70,7 +69,7 @@ class DuplicatesViewModel @Inject constructor(
                     selectedBytes = 0L,
                     expandedGroupIds = emptySet(),
                     isDeleting = false,
-                    message = null,
+                    message = pendingMessage.also { pendingMessage = null },
                     limitedScan = needsLimitedScanHint(),
                 )
                 lastScanAccessGranted = false
@@ -92,7 +91,7 @@ class DuplicatesViewModel @Inject constructor(
                     selectedBytes = selectedBytesForDuplicateKeys(fileIndex, selectedKeys),
                     expandedGroupIds = previous?.expandedGroupIds ?: defaultExpandedDuplicateGroups(groups),
                     isDeleting = false,
-                    message = null,
+                    message = pendingMessage.also { pendingMessage = null },
                     limitedScan = needsLimitedScanHint(),
                 )
                 lastScanAtEpochMs = System.currentTimeMillis()
@@ -164,94 +163,30 @@ class DuplicatesViewModel @Inject constructor(
     fun runCleanSelected(launchSystemDelete: (PendingIntent) -> Unit) {
         val ready = _uiState.value as? DuplicatesUiState.Ready ?: return
         if (ready.selectedKeys.isEmpty() || ready.isDeleting || deleteFlowInFlight) return
-
-        _uiState.value = ready.copy(isDeleting = true, message = null)
-        systemDeleteLauncher = launchSystemDelete
+        val items = ready.selectedKeys.mapNotNull { ready.fileIndex[it]?.toJunkFileItem() }
         deleteFlowInFlight = true
-
+        _uiState.value = ready.copy(isDeleting = true, message = null)
         viewModelScope.launch {
-            val selectedItems = withContext(Dispatchers.Default) {
-                ready.selectedKeys.mapNotNull { key -> ready.fileIndex[key]?.toJunkFileItem() }
-            }
-            val plan = withContext(Dispatchers.Default) {
-                duplicatesRepository.planDelete(selectedItems)
-            }
-            postSystemDeleteDirect = plan.directDelete.takeIf { it.isNotEmpty() }
-            pendingSystemDeleteBatches = ArrayDeque(plan.systemPromptBatches)
-
-            if (pendingSystemDeleteBatches.isNotEmpty()) {
-                startNextSystemDeleteBatch()
-            } else {
+            try {
+                val deleted = cleanup.clean(items, duplicatesRepository::planDelete,
+                    duplicatesRepository::createDeleteRequest, duplicatesRepository::deleteSelected, launchSystemDelete)
+                pendingMessage = context.getString(R.string.cleanup_result, deleted, items.size)
+                if (deleted == items.size && deleted > 0) {
+                    showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                pendingMessage = context.getString(R.string.cleanup_failed)
+            } finally {
                 deleteFlowInFlight = false
-                systemDeleteLauncher = null
-                postSystemDeleteDirect = null
-                deleteWithoutSystemPrompt(selectedItems)
             }
+            loadDuplicates(force = true)
         }
     }
 
     fun onDeleteFinished(success: Boolean) {
-        if (success && pendingSystemDeleteBatches.isNotEmpty()) {
-            startNextSystemDeleteBatch()
-            return
-        }
-        val followUp = postSystemDeleteDirect
-        postSystemDeleteDirect = null
-        pendingSystemDeleteBatches.clear()
-        systemDeleteLauncher = null
-        deleteFlowInFlight = false
-
-        if (success) {
-            showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
-            if (!followUp.isNullOrEmpty()) {
-                viewModelScope.launch {
-                    withContext(Dispatchers.IO) {
-                        duplicatesRepository.deleteSelected(followUp)
-                    }
-                    loadDuplicates(force = true)
-                }
-            } else {
-                loadDuplicates(force = true)
-            }
-        } else {
-            val current = _uiState.value as? DuplicatesUiState.Ready ?: return
-            _uiState.value = current.copy(
-                isDeleting = false,
-                message = context.getString(R.string.duplicates_error_delete),
-            )
-        }
-    }
-
-    private fun startNextSystemDeleteBatch() {
-        viewModelScope.launch {
-            val launcher = systemDeleteLauncher
-            val batch = pendingSystemDeleteBatches.removeFirstOrNull()
-            if (batch == null || launcher == null) {
-                deleteFlowInFlight = false
-                onDeleteFinished(success = true)
-                return@launch
-            }
-            val pending = withContext(Dispatchers.IO) {
-                duplicatesRepository.createDeleteRequest(batch)
-            }
-            if (pending != null) {
-                deleteFlowInFlight = false
-                launcher(pending)
-            } else {
-                postSystemDeleteDirect = (postSystemDeleteDirect.orEmpty() + batch).distinctBy { it.selectionKey }
-                startNextSystemDeleteBatch()
-            }
-        }
-    }
-
-    private fun deleteWithoutSystemPrompt(items: List<JunkFileItem>) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                duplicatesRepository.deleteSelected(items)
-            }
-            showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
-            loadDuplicates(force = true)
-        }
+        cleanup.onApproval(success)
     }
 
     private fun DuplicatesUiState.Ready.withSelection(selectedKeys: Set<String>): DuplicatesUiState.Ready {

@@ -48,7 +48,7 @@ import com.sunilshetty.clearspace.ui.components.ClearSpacePrimaryButton
 import com.sunilshetty.clearspace.ui.components.ClearSpaceSelectionSummaryRow
 import com.sunilshetty.clearspace.ui.components.clearSpaceBottomBarPadding
 import com.sunilshetty.clearspace.ui.components.ClearSpaceWorkingOverlay
-import com.sunilshetty.clearspace.ui.components.InfinityLoaderGif
+import com.sunilshetty.clearspace.ui.components.ClearSpaceLoadingIndicator
 import java.text.DateFormat
 import java.util.Date
 
@@ -125,7 +125,7 @@ fun UnusedAppsScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        InfinityLoaderGif(size = 128.dp)
+                        ClearSpaceLoadingIndicator(size = 96.dp)
                         Text(
                             text = stringResource(R.string.unused_apps_scanning),
                             modifier = Modifier.padding(top = 12.dp),

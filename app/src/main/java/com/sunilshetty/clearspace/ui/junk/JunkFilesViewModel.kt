@@ -38,10 +38,9 @@ class JunkFilesViewModel @Inject constructor(
     private var lastScanAccessGranted: Boolean = false
     private var scanInFlight: Boolean = false
 
-    private var postSystemDeleteDirect: List<JunkFileItem>? = null
-    private var pendingSystemDeleteBatches: ArrayDeque<List<JunkFileItem>> = ArrayDeque()
-    private var systemDeleteLauncher: ((PendingIntent) -> Unit)? = null
-    private var deleteFlowInFlight: Boolean = false
+    private val cleanup = com.sunilshetty.clearspace.ui.components.CleanupController()
+    private var deleteFlowInFlight = false
+    private var pendingMessage: String? = null
 
     init {
         loadJunkFiles(force = true)
@@ -54,7 +53,7 @@ class JunkFilesViewModel @Inject constructor(
             System.currentTimeMillis() - lastScanAtEpochMs < SCAN_CACHE_TTL_MS &&
             _uiState.value is JunkFilesUiState.Ready
 
-        if (cacheFresh || scanInFlight) return
+        if (cacheFresh || scanInFlight || deleteFlowInFlight) return
 
         viewModelScope.launch {
             scanInFlight = true
@@ -70,7 +69,7 @@ class JunkFilesViewModel @Inject constructor(
                     selectedBytes = 0L,
                     expandedGroupIds = emptySet(),
                     isDeleting = false,
-                    message = null,
+                    message = pendingMessage.also { pendingMessage = null },
                     limitedScan = needsLimitedScanHint(),
                 )
                 lastScanAccessGranted = false
@@ -96,7 +95,7 @@ class JunkFilesViewModel @Inject constructor(
                     selectedBytes = selectedBytesForKeys(fileIndex, selectedKeys),
                     expandedGroupIds = previous?.expandedGroupIds ?: defaultExpandedGroupIds(groups),
                     isDeleting = false,
-                    message = null,
+                    message = pendingMessage.also { pendingMessage = null },
                     limitedScan = needsLimitedScanHint(),
                 )
                 lastScanAtEpochMs = System.currentTimeMillis()
@@ -173,97 +172,30 @@ class JunkFilesViewModel @Inject constructor(
     fun runCleanSelected(launchSystemDelete: (PendingIntent) -> Unit) {
         val ready = _uiState.value as? JunkFilesUiState.Ready ?: return
         if (ready.selectedKeys.isEmpty() || ready.isDeleting || deleteFlowInFlight) return
-
-        _uiState.value = ready.copy(isDeleting = true, message = null)
-        systemDeleteLauncher = launchSystemDelete
+        val items = ready.selectedKeys.mapNotNull { ready.fileIndex[it] }
         deleteFlowInFlight = true
-
+        _uiState.value = ready.copy(isDeleting = true, message = null)
         viewModelScope.launch {
-            val selectedItems = withContext(Dispatchers.Default) {
-                ready.selectedKeys.mapNotNull { key -> ready.fileIndex[key] }
-            }
-            val plan = withContext(Dispatchers.Default) {
-                junkFilesRepository.planDelete(selectedItems)
-            }
-
-            postSystemDeleteDirect = plan.directDelete.takeIf { it.isNotEmpty() }
-            pendingSystemDeleteBatches = ArrayDeque(plan.systemPromptBatches)
-
-            if (pendingSystemDeleteBatches.isNotEmpty()) {
-                startNextSystemDeleteBatch()
-            } else {
+            try {
+                val deleted = cleanup.clean(items, junkFilesRepository::planDelete,
+                    junkFilesRepository::createDeleteRequest, junkFilesRepository::deleteSelected, launchSystemDelete)
+                pendingMessage = context.getString(R.string.cleanup_result, deleted, items.size)
+                if (deleted == items.size && deleted > 0) {
+                    showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                pendingMessage = context.getString(R.string.cleanup_failed)
+            } finally {
                 deleteFlowInFlight = false
-                systemDeleteLauncher = null
-                postSystemDeleteDirect = null
-                deleteWithoutSystemPrompt(selectedItems)
             }
+            loadJunkFiles(force = true)
         }
     }
 
     fun onDeleteFinished(success: Boolean) {
-        if (success && pendingSystemDeleteBatches.isNotEmpty()) {
-            startNextSystemDeleteBatch()
-            return
-        }
-
-        val followUpDirect = postSystemDeleteDirect
-        postSystemDeleteDirect = null
-        pendingSystemDeleteBatches.clear()
-        systemDeleteLauncher = null
-        deleteFlowInFlight = false
-
-        if (success) {
-            showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
-            if (!followUpDirect.isNullOrEmpty()) {
-                viewModelScope.launch {
-                    withContext(Dispatchers.IO) {
-                        junkFilesRepository.deleteSelected(followUpDirect)
-                    }
-                    loadJunkFiles(force = true)
-                }
-            } else {
-                loadJunkFiles(force = true)
-            }
-        } else {
-            val current = _uiState.value as? JunkFilesUiState.Ready ?: return
-            _uiState.value = current.copy(
-                isDeleting = false,
-                message = context.getString(R.string.junk_error_delete),
-            )
-        }
-    }
-
-    private fun startNextSystemDeleteBatch() {
-        viewModelScope.launch {
-            val launchSystemDelete = systemDeleteLauncher
-            val batch = pendingSystemDeleteBatches.removeFirstOrNull()
-            if (batch == null || launchSystemDelete == null) {
-                deleteFlowInFlight = false
-                onDeleteFinished(success = true)
-                return@launch
-            }
-            val pending = withContext(Dispatchers.IO) {
-                junkFilesRepository.createDeleteRequest(batch)
-            }
-            if (pending != null) {
-                deleteFlowInFlight = false
-                launchSystemDelete(pending)
-            } else {
-                postSystemDeleteDirect = (postSystemDeleteDirect.orEmpty() + batch)
-                    .distinctBy { it.selectionKey }
-                startNextSystemDeleteBatch()
-            }
-        }
-    }
-
-    private fun deleteWithoutSystemPrompt(items: List<JunkFileItem>) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                junkFilesRepository.deleteSelected(items)
-            }
-            showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
-            loadJunkFiles(force = true)
-        }
+        cleanup.onApproval(success)
     }
 
     private fun JunkFilesUiState.Ready.withSelection(selectedKeys: Set<String>): JunkFilesUiState.Ready {

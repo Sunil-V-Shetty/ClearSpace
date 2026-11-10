@@ -1,67 +1,40 @@
 package com.sunilshetty.clearspace.ui.home
 
 import android.Manifest
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Photo
-import androidx.compose.material.icons.outlined.Radar
-import androidx.compose.material.icons.outlined.VideoLibrary
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.automirrored.outlined.ManageSearch
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
-import com.sunilshetty.clearspace.core.constants.Constants
 import com.sunilshetty.clearspace.R
-import com.sunilshetty.clearspace.data.model.StorageCategory
+import com.sunilshetty.clearspace.core.R as CoreR
+import com.sunilshetty.clearspace.core.constants.Constants
 import com.sunilshetty.clearspace.data.model.DeviceStorageInfo
-import com.sunilshetty.clearspace.data.model.StorageCategoryBreakdown
+import com.sunilshetty.clearspace.data.model.StorageCategory
 import com.sunilshetty.clearspace.data.model.StorageScanSnapshot
-import com.sunilshetty.clearspace.ui.components.BentoCard
-import com.sunilshetty.clearspace.ui.components.BentoLabel
-import com.sunilshetty.clearspace.ui.components.BentoQuickAction
-import com.sunilshetty.clearspace.ui.components.BentoScreenBackground
-import com.sunilshetty.clearspace.ui.components.BentoStorageProgress
-import com.sunilshetty.clearspace.ui.components.BentoSubtleText
-import com.sunilshetty.clearspace.ui.components.BentoValue
-import com.sunilshetty.clearspace.ui.components.ClearSpaceScreenHeader
-import com.sunilshetty.clearspace.ui.components.bentoHorizontalPadding
-import com.sunilshetty.clearspace.ui.components.rememberBentoScrollState
-import com.sunilshetty.clearspace.ui.components.rememberStorageFormatBytes
-import com.sunilshetty.clearspace.ui.components.rememberStorageFormatPercent
 import com.sunilshetty.clearspace.navigation.rememberHomeViewModel
+import com.sunilshetty.clearspace.ui.components.*
 import com.sunilshetty.clearspace.ui.detail.appRuntimePermissions
 import com.sunilshetty.clearspace.ui.detail.hasMediaAccess
 import com.sunilshetty.clearspace.ui.permissions.LocalAppPermissionActions
 import com.sunilshetty.clearspace.ui.theme.ClearSpaceTheme
-import com.sunilshetty.clearspace.util.StorageFormatter
 
 @Composable
 fun HomeScreen(
@@ -128,7 +101,6 @@ fun HomeScreen(
                 scanSnapshot = state.scanSnapshot,
                 isScanning = state.isScanning,
                 scanError = state.scanError,
-                memorySnapshot = state.memorySnapshot,
                 mediaPermissions = mediaPermissions,
                 onOpenSettings = onOpenSettings,
                 onNavigate = onNavigate,
@@ -146,7 +118,6 @@ private fun HomeContent(
     scanSnapshot: StorageScanSnapshot?,
     isScanning: Boolean,
     scanError: String?,
-    memorySnapshot: com.sunilshetty.clearspace.data.model.DeviceMemorySnapshot?,
     mediaPermissions: Array<String>,
     onOpenSettings: () -> Unit,
     onNavigate: (String) -> Unit,
@@ -156,242 +127,141 @@ private fun HomeContent(
 ) {
     val formatBytes = rememberStorageFormatBytes()
     val formatPercent = rememberStorageFormatPercent()
-    val mediaTotalBytes = scanSnapshot?.categories?.sumOf { it.totalBytes } ?: 0L
-
-    BentoScreenBackground(
-        modifier = modifier.fillMaxSize(),
-    ) {
-        ClearSpaceScreenHeader(
-            titleRes = R.string.home_screen_title,
-            onOpenSettings = onOpenSettings,
-            onRefreshStorage = onRefreshStorage,
-        )
+    BentoScreenBackground(modifier.fillMaxSize()) {
+        ClearSpaceScreenHeader(R.string.home_screen_title, onOpenSettings, onRefreshStorage = onRefreshStorage)
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberBentoScrollState())
-                .padding(bottom = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberBentoScrollState())
+                .padding(horizontal = 20.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            BentoCard(
-                modifier = Modifier.bentoHorizontalPadding(),
-                onClick = { onNavigate(Constants.Navigation.SMART_SCAN) },
-            ) {
-                BentoLabel(text = stringResource(R.string.home_bento_quick_actions))
-                BentoStorageProgress(usedFraction = storage.usedPercent)
-                BentoSubtleText(
-                    text = stringResource(
-                        R.string.storage_used_of_total,
-                        formatBytes(storage.usedBytes),
-                        formatBytes(storage.totalBytes),
-                        formatPercent(storage.usedPercent),
-                    ),
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                ) {
-                    BentoQuickAction(
-                        label = stringResource(R.string.quick_scan_action),
-                        icon = Icons.Outlined.Radar,
-                        onClick = { onNavigate(Constants.Navigation.SMART_SCAN) },
-                        modifier = Modifier.weight(1f),
-                        caption = when {
-                            isScanning -> stringResource(R.string.scan_running)
-                            memorySnapshot != null -> stringResource(
-                                R.string.quick_scan_home_ram_caption,
-                                formatPercent(memorySnapshot.usedFraction),
-                            )
-                            else -> null
-                        },
-                    )
-                    CategoryQuickAction(
-                        scanSnapshot = scanSnapshot,
-                        categoryLabelRes = R.string.category_photos,
-                        icon = Icons.Outlined.Photo,
-                        formatBytes = formatBytes,
-                        category = StorageCategory.PHOTOS,
-                        onNavigate = onNavigate,
-                        modifier = Modifier.weight(1f),
-                    )
-                    CategoryQuickAction(
-                        scanSnapshot = scanSnapshot,
-                        categoryLabelRes = R.string.category_videos,
-                        icon = Icons.Outlined.VideoLibrary,
-                        formatBytes = formatBytes,
-                        category = StorageCategory.VIDEOS,
-                        onNavigate = onNavigate,
-                        modifier = Modifier.weight(1f),
-                    )
-                    CategoryQuickAction(
-                        scanSnapshot = scanSnapshot,
-                        categoryLabelRes = R.string.category_downloads,
-                        icon = Icons.Outlined.Download,
-                        formatBytes = formatBytes,
-                        category = StorageCategory.DOWNLOADS,
-                        onNavigate = onNavigate,
-                        modifier = Modifier.weight(1f),
-                    )
+            // Storage is context; the cleanup action below owns the visual emphasis.
+            BentoCard {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Outlined.Storage, null, Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
+                    Column(Modifier.weight(1f)) {
+                        Text("Internal storage", style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${formatBytes(storage.freeBytes)} available", style = MaterialTheme.typography.titleLarge)
+                    }
                 }
-                if (scanError != null) {
-                    Text(
-                        text = scanError,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
+                BentoStorageProgress(storage.usedPercent)
+                Text("${formatPercent(storage.usedPercent)} used · ${formatBytes(storage.totalBytes)} total",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth()) {
+                    TextButton(onClick = { onNavigate(Constants.Navigation.STORAGE_USED) }, modifier = Modifier.weight(1f)) {
+                        Text("Storage details")
+                    }
+                    TextButton(onClick = { onNavigate(Constants.Navigation.STORAGE_FREE) }, modifier = Modifier.weight(1f)) {
+                        Text("Free space")
+                    }
+                }
+            }
+            Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Free up space", style = MaterialTheme.typography.titleLarge)
+                    Button(onClick = { onNavigate(Constants.Navigation.RECLAIMABLE) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = MaterialTheme.shapes.medium) {
+                        Text("Review cleanup")
+                        Spacer(Modifier.width(8.dp))
+                        Icon(Icons.AutoMirrored.Outlined.ManageSearch, null, Modifier.size(20.dp))
+                    }
+                }
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Cleanup tools", style = MaterialTheme.typography.titleMedium)
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    if (maxWidth < 320.dp || LocalDensity.current.fontScale > 1.3f) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ClearSpaceActionRow("Junk files", "Temporary files", Icons.Outlined.CleaningServices,
+                                { onNavigate(Constants.Navigation.JUNK_FILES) })
+                            ClearSpaceActionRow("Duplicates", "Identical copies", Icons.Outlined.ContentCopy,
+                                { onNavigate(Constants.Navigation.DUPLICATE_FILES) })
+                            ClearSpaceActionRow("Large files", "Files over 5 MB", Icons.Outlined.Folder,
+                                { onNavigate(Constants.Navigation.LARGE_FILES) })
+                        }
+                    } else {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            CleanupShortcut("Junk files", Icons.Outlined.CleaningServices,
+                                { onNavigate(Constants.Navigation.JUNK_FILES) }, Modifier.weight(1f))
+                            CleanupShortcut("Duplicates", Icons.Outlined.ContentCopy,
+                                { onNavigate(Constants.Navigation.DUPLICATE_FILES) }, Modifier.weight(1f))
+                            CleanupShortcut("Large files", Icons.Outlined.Folder,
+                                { onNavigate(Constants.Navigation.LARGE_FILES) }, Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+            ClearSpaceActionRow("Trash", "Restore or delete forever",
+                Icons.Outlined.RestoreFromTrash, { onNavigate(Constants.Navigation.TRASH) })
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Files", style = MaterialTheme.typography.titleMedium)
+                CategoryStorageRow(scanSnapshot, CoreR.string.category_photos, Icons.Outlined.Photo,
+                    formatBytes, StorageCategory.PHOTOS, storage.totalBytes, onNavigate)
+                CategoryStorageRow(scanSnapshot, CoreR.string.category_videos, Icons.Outlined.VideoLibrary,
+                    formatBytes, StorageCategory.VIDEOS, storage.totalBytes, onNavigate)
+                CategoryStorageRow(scanSnapshot, CoreR.string.category_downloads, Icons.Outlined.Download,
+                    formatBytes, StorageCategory.DOWNLOADS, storage.totalBytes, onNavigate)
+                if (scanSnapshot != null) {
+                    Text("Scanned files · bars show a share of total storage",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (mediaPermissions.isNotEmpty() && !mediaAccessGranted) {
-                    TextButton(
-                        onClick = onRequestMediaAccess,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                    ) {
+                    Text("Allow access to scan more media.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(onClick = onRequestMediaAccess, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.media_access_request))
                     }
                 }
+                scanError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
-
-            Row(
-                modifier = Modifier.bentoHorizontalPadding(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                BentoCard(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 148.dp),
-                    onClick = { onNavigate(Constants.Navigation.STORAGE_FREE) },
-                ) {
-                    BentoLabel(text = stringResource(R.string.home_bento_label_free))
-                    BentoValue(text = formatBytes(storage.freeBytes))
-                    BentoSubtleText(text = stringResource(R.string.storage_on_device_note))
-                }
-                BentoCard(
-                    modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 148.dp),
-                    onClick = { onNavigate(Constants.Navigation.STORAGE_USED) },
-                ) {
-                    BentoLabel(text = stringResource(R.string.home_bento_label_used))
-                    BentoValue(text = formatBytes(storage.usedBytes))
-                    BentoSubtleText(
-                        text = formatPercent(storage.usedPercent) + " · " +
-                            formatBytes(storage.totalBytes),
-                    )
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("More tools", style = MaterialTheme.typography.titleMedium)
+                ClearSpaceActionRow("Quick Scan", "Storage, memory and media",
+                    Icons.Outlined.Radar, { onNavigate(Constants.Navigation.SMART_SCAN) })
+                ClearSpaceActionRow("Device diagnostics", "Readings and hardware checks",
+                    Icons.Outlined.MonitorHeart, { onNavigate(Constants.Navigation.DIAGNOSTICS) })
+                ClearSpaceActionRow("Media overview",
+                    scanSnapshot?.let { "${formatBytes(it.categories.sumOf { c -> c.totalBytes })} in scanned media" }
+                        ?: "Photos, videos and downloads",
+                    Icons.Outlined.PermMedia, { onNavigate(Constants.Navigation.MEDIA) })
             }
-
-            Row(
-                modifier = Modifier.bentoHorizontalPadding(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                BentoCard(
-                    modifier = Modifier
-                        .weight(0.58f)
-                        .heightIn(min = 212.dp),
-                    onClick = { onNavigate(Constants.Navigation.MEDIA) },
-                ) {
-                    BentoLabel(text = stringResource(R.string.home_bento_label_media))
-                    if (scanSnapshot != null) {
-                        BentoValue(text = formatBytes(mediaTotalBytes))
-                        Spacer(modifier = Modifier.height(4.dp))
-                        scanSnapshot.categories.forEach { breakdown ->
-                            CategoryBreakdownLine(
-                                breakdown = breakdown,
-                                formatBytes = formatBytes,
-                            )
-                        }
-                        BentoSubtleText(
-                            text = stringResource(
-                                R.string.scan_last_run,
-                                StorageFormatter.formatTimestamp(scanSnapshot.scannedAtEpochMs),
-                            ),
-                        )
-                    } else {
-                        BentoValue(text = stringResource(R.string.home_bento_reclaim_short))
-                        BentoSubtleText(text = stringResource(R.string.home_bento_scan_cta))
-                    }
-                }
-                Column(
-                    modifier = Modifier.weight(0.42f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    BentoCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        onClick = { onNavigate(Constants.Navigation.INSIGHTS) },
-                    ) {
-                        BentoLabel(text = stringResource(R.string.card_insights))
-                        BentoValue(text = stringResource(R.string.home_bento_insights_short))
-                        BentoSubtleText(
-                            text = stringResource(R.string.card_insights_empty),
-                        )
-                    }
-                    BentoCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        onClick = { onNavigate(Constants.Navigation.RECLAIMABLE) },
-                    ) {
-                        BentoLabel(text = stringResource(R.string.card_reclaimable))
-                        BentoValue(text = stringResource(R.string.home_bento_reclaim_short))
-                        BentoSubtleText(
-                            text = stringResource(R.string.card_reclaimable_empty),
-                        )
-                    }
-                }
-            }
-
-            if (isScanning) {
-                Row(
-                    modifier = Modifier.bentoHorizontalPadding(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Text(
-                        text = stringResource(R.string.scan_running),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
+            if (isScanning) LinearProgressIndicator(Modifier.fillMaxWidth())
         }
     }
 }
 
 @Composable
-private fun CategoryQuickAction(
+private fun CleanupShortcut(title: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Card(onClick = onClick, modifier = modifier.heightIn(min = 112.dp), shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(icon, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(title, style = MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
+@Composable
+private fun CategoryStorageRow(
     scanSnapshot: StorageScanSnapshot?,
     categoryLabelRes: Int,
     icon: ImageVector,
     formatBytes: (Long) -> String,
     category: StorageCategory,
+    storageCapacity: Long,
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val breakdown = scanSnapshot?.categories?.firstOrNull { it.category == category }
-    BentoQuickAction(
-        label = stringResource(categoryLabelRes),
+    ClearSpaceStorageRow(
+        title = stringResource(categoryLabelRes),
+        amount = breakdown?.let { formatBytes(it.totalBytes) } ?: "View files",
         icon = icon,
+        fraction = breakdown?.takeIf { storageCapacity > 0L }?.let { it.totalBytes.toFloat() / storageCapacity },
         onClick = { onNavigate(category.navigationRoute()) },
         modifier = modifier,
-        caption = breakdown?.let { formatBytes(it.totalBytes) },
-    )
-}
-
-@Composable
-private fun CategoryBreakdownLine(
-    breakdown: StorageCategoryBreakdown,
-    formatBytes: (Long) -> String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        modifier = modifier.fillMaxWidth(),
-        text = stringResource(breakdown.category.labelRes()) + ": " + formatBytes(breakdown.totalBytes),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
@@ -436,7 +306,6 @@ private fun HomeScreenPreview() {
             scanSnapshot = null,
             isScanning = false,
             scanError = null,
-            memorySnapshot = null,
             mediaPermissions = arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
             onOpenSettings = {},
             onNavigate = {},

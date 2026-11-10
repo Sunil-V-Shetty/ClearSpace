@@ -57,7 +57,7 @@ import com.sunilshetty.clearspace.ui.components.ClearSpacePrimaryButton
 import com.sunilshetty.clearspace.ui.components.ClearSpaceSelectionSummaryRow
 import com.sunilshetty.clearspace.ui.components.ClearSpaceWorkingOverlay
 import com.sunilshetty.clearspace.ui.components.clearSpaceBottomBarPadding
-import com.sunilshetty.clearspace.ui.components.InfinityLoaderGif
+import com.sunilshetty.clearspace.ui.components.ClearSpaceLoadingIndicator
 import com.sunilshetty.clearspace.ui.components.rememberStorageFormatBytes
 import com.sunilshetty.clearspace.ui.detail.appRuntimePermissions
 import com.sunilshetty.clearspace.ui.detail.hasJunkReadAccess
@@ -139,7 +139,7 @@ fun DuplicatesScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        InfinityLoaderGif(size = 128.dp)
+                        ClearSpaceLoadingIndicator(size = 96.dp)
                         Text(
                             text = stringResource(R.string.duplicates_scanning),
                             modifier = Modifier.padding(top = 12.dp),

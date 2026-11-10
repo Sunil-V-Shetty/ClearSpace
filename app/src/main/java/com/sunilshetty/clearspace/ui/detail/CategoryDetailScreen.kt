@@ -39,6 +39,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -57,7 +59,7 @@ import com.sunilshetty.clearspace.ui.components.ClearSpacePrimaryButton
 import com.sunilshetty.clearspace.ui.components.ClearSpaceSelectionSummaryRow
 import com.sunilshetty.clearspace.ui.components.clearSpaceBottomBarPadding
 import com.sunilshetty.clearspace.ui.components.ClearSpaceWorkingOverlay
-import com.sunilshetty.clearspace.ui.components.InfinityLoaderGif
+import com.sunilshetty.clearspace.ui.components.ClearSpaceLoadingIndicator
 import com.sunilshetty.clearspace.ui.components.rememberStorageFormatBytes
 import com.sunilshetty.clearspace.ui.permissions.LocalAppPermissionActions
 import java.text.DateFormat
@@ -149,7 +151,7 @@ fun CategoryDetailScreen(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        InfinityLoaderGif(size = 128.dp)
+                        ClearSpaceLoadingIndicator(size = 96.dp)
                         Text(
                             text = stringResource(R.string.category_detail_loading),
                             modifier = Modifier.padding(top = 12.dp),
@@ -320,7 +322,9 @@ private fun CategoryMediaRow(
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = { onCheckedChange() })
+        val selectionLabel = stringResource(R.string.select_file, item.displayName)
+        Checkbox(checked = checked, onCheckedChange = { onCheckedChange() },
+            modifier = Modifier.semantics { contentDescription = selectionLabel })
         Surface(
             modifier = Modifier
                 .padding(end = 12.dp)

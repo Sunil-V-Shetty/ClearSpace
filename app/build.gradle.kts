@@ -56,17 +56,18 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":core"))
+    implementation(project(":design"))
     implementation(libs.androidx.core.splashscreen)
     coreAndroidX()
     compose()
     composeDebug()
     hilt()
     navigationCompose()
-    room()
-    workManager()
     coil()
-    dataStorePreferences()
     jUnit()
     androidxTest()
     composeAndroidTest()
+    androidTestImplementation(Dependencies.roomRuntime)
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 }

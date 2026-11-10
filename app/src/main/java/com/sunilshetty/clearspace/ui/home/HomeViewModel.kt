@@ -43,6 +43,7 @@ class HomeViewModel @Inject constructor(
 
     fun loadHome() {
         viewModelScope.launch {
+            val previous = _uiState.value as? HomeUiState.Success
             _uiState.value = HomeUiState.Loading
             runCatching {
                 withContext(Dispatchers.IO) {
@@ -52,7 +53,6 @@ class HomeViewModel @Inject constructor(
                     Triple(storage, scanSnapshot, memory)
                 }
             }.onSuccess { (storage, scanSnapshot, memory) ->
-                val previous = _uiState.value as? HomeUiState.Success
                 _uiState.value = HomeUiState.Success(
                     storage = storage,
                     mediaAccessGranted = mediaAccessGranted,
@@ -73,7 +73,6 @@ class HomeViewModel @Inject constructor(
 
     fun refreshStorage() {
         viewModelScope.launch {
-            val current = _uiState.value
             runCatching {
                 withContext(Dispatchers.IO) {
                     val storage = deviceStorageRepository.getDeviceStorage()
@@ -81,6 +80,7 @@ class HomeViewModel @Inject constructor(
                     storage to memory
                 }
             }.onSuccess { (storage, memory) ->
+                val current = _uiState.value
                 when (current) {
                     is HomeUiState.Success -> {
                         _uiState.value = current.copy(
@@ -143,6 +143,10 @@ class HomeViewModel @Inject constructor(
                         delay(QUICK_SCAN_CELEBRATION_MS)
                         dismissQuickScanCelebration()
                     }
+                }.onFailure {
+                    val latest = _uiState.value as? HomeUiState.Success ?: return@onFailure
+                    _uiState.value = latest.copy(isScanning = false, quickScanStep = null,
+                        scanError = context.getString(R.string.error_quick_scan_failed))
                 }
             }.onFailure {
                 val latest = _uiState.value as? HomeUiState.Success ?: return@onFailure

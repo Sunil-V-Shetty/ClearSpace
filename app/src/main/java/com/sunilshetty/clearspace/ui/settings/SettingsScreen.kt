@@ -15,12 +15,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -40,6 +47,17 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     themeViewModel: ThemeViewModel = hiltViewModel(LocalContext.current as ComponentActivity),
 ) {
+    var showLicenses by rememberSaveable { mutableStateOf(false) }
+    val assetContext = LocalContext.current
+    if (showLicenses) {
+        val license = remember(assetContext) {
+            assetContext.assets.open("licenses/material-icons.txt").bufferedReader().use { it.readText() }
+        }
+        AlertDialog(onDismissRequest = { showLicenses = false },
+            title = { Text("Open-source licenses") },
+            text = { Text(license, Modifier.verticalScroll(rememberScrollState()), style = MaterialTheme.typography.bodySmall) },
+            confirmButton = { TextButton(onClick = { showLicenses = false }) { Text("Close") } })
+    }
     val darkModeEnabled by themeViewModel.darkModeEnabled.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -77,7 +95,9 @@ fun SettingsScreen(
                             modifier = Modifier.padding(top = 4.dp),
                         )
                     }
+                    val darkModeLabel = stringResource(R.string.settings_dark_mode_title)
                     Switch(
+                        modifier = Modifier.semantics { contentDescription = darkModeLabel },
                         checked = darkModeEnabled,
                         onCheckedChange = themeViewModel::setDarkModeEnabled,
                     )
@@ -91,6 +111,20 @@ fun SettingsScreen(
                 titleRes = R.string.settings_permissions_title,
                 bodyRes = R.string.settings_permissions_body,
             )
+            val context = LocalContext.current
+            val permissionActions = com.sunilshetty.clearspace.ui.permissions.LocalAppPermissionActions.current
+            androidx.compose.material3.OutlinedButton(onClick = { permissionActions?.requestAllPermissions() }) {
+                Text("Manage media access")
+            }
+            androidx.compose.material3.OutlinedButton(onClick = { permissionActions?.openFullStorageAccessSettings() }) {
+                Text("All-files access")
+            }
+            androidx.compose.material3.OutlinedButton(onClick = {
+                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.parse("package:${context.packageName}")))
+            }) { Text("Android settings") }
+            TextButton(onClick = { showLicenses = true }) { Text("Open-source artwork") }
+            Text("ClearSpace 1.0", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

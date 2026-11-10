@@ -1,8 +1,11 @@
 package com.sunilshetty.clearspace.ui.detail
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -11,11 +14,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.sunilshetty.clearspace.R
+import com.sunilshetty.clearspace.core.constants.Constants
 import com.sunilshetty.clearspace.data.model.DeviceStorageInfo
 import com.sunilshetty.clearspace.navigation.rememberHomeViewModel
 import com.sunilshetty.clearspace.ui.components.BentoStorageProgress
 import com.sunilshetty.clearspace.ui.components.BentoSubtleText
 import com.sunilshetty.clearspace.ui.components.BentoValue
+import com.sunilshetty.clearspace.ui.components.BentoCard
+import com.sunilshetty.clearspace.ui.components.BentoLabel
+import com.sunilshetty.clearspace.ui.components.ClearSpaceLoadingIndicator
 import com.sunilshetty.clearspace.ui.components.rememberStorageFormatBytes
 import com.sunilshetty.clearspace.ui.components.rememberStorageFormatPercent
 import com.sunilshetty.clearspace.ui.home.HomeUiState
@@ -37,9 +44,9 @@ internal fun StorageDetailContent(
     DetailScreenScaffold(titleRes = titleRes, onBack = onBack) {
         when (val state = uiState) {
             is HomeUiState.Success -> {
-                BentoValue(text = formatBytes(valueSelector(state.storage)))
-                if (showUsageBar) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                BentoCard(modifier = Modifier.padding(vertical = 16.dp)) {
+                    BentoLabel(if (showUsageBar) "Space in use" else "Available space")
+                    BentoValue(text = formatBytes(valueSelector(state.storage)))
                     BentoStorageProgress(usedFraction = state.storage.usedPercent)
                     BentoSubtleText(
                         text = stringResource(
@@ -49,18 +56,26 @@ internal fun StorageDetailContent(
                             formatPercent(state.storage.usedPercent),
                         ),
                     )
+                    Text("Total capacity: ${formatBytes(state.storage.totalBytes)}", style = MaterialTheme.typography.bodyMedium)
+                    Text("Available: ${formatBytes(state.storage.freeBytes)}", style = MaterialTheme.typography.bodyMedium)
                 }
-                if (subtitleRes != null) {
-                    DetailBodyText(text = stringResource(subtitleRes))
+                DetailBodyText("Includes Android, apps and files.")
+                DetailBodyText("Empty Trash to free space used by recovery copies.")
+                Button(onClick = { navController.navigate(Constants.Navigation.RECLAIMABLE) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Review cleanup")
                 }
-                DetailBodyText(
-                    text = stringResource(
-                        R.string.storage_free_amount,
-                        formatBytes(state.storage.freeBytes),
-                    ),
-                )
+                Button(onClick = { navController.navigate(Constants.Navigation.MEDIA) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Media overview")
+                }
             }
-            else -> DetailBodyText(text = stringResource(R.string.error_storage_title))
+            HomeUiState.Loading -> {
+                ClearSpaceLoadingIndicator()
+                DetailBodyText("Reading internal storage…")
+            }
+            is HomeUiState.Error -> {
+                DetailBodyText(state.message)
+                Button(onClick = viewModel::loadHome) { Text(stringResource(R.string.action_try_again)) }
+            }
         }
     }
 }

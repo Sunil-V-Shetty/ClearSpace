@@ -25,7 +25,6 @@ object Dependencies {
     const val roomCompiler = "androidx.room:room-compiler:2.7.2"
     const val workRuntimeKtx = "androidx.work:work-runtime-ktx:2.9.1"
     const val coilCompose = "io.coil-kt:coil-compose:2.7.0"
-    const val coilGif = "io.coil-kt:coil-gif:2.7.0"
     const val datastorePreferences = "androidx.datastore:datastore-preferences:1.1.1"
     const val kotlinxSerializationJson = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"
 }

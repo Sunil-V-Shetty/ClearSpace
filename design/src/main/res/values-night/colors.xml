@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="splash_background">#FF0D1720</color>
+
+    <!-- Red (dark theme) -->
+    <color name="red_0">#FF1A0F0F</color>
+    <color name="red_1">#FF2A1414</color>
+    <color name="red_2">#FF3E1A1A</color>
+    <color name="red_3">#FF5C2222</color>
+    <color name="red_4">#FF7A2E2E</color>
+    <color name="red_5">#FF9E3A3A</color>
+    <color name="red_6">#FFB74A4A</color>
+    <color name="red_7">#FFD16A6A</color>
+    <color name="red_8">#FFE57373</color>
+    <color name="red_9">#FFFFCDD2</color>
+
+    <!-- Orange (dark theme) -->
+    <color name="orange_0">#FF1A1208</color>
+    <color name="orange_1">#FF2A1A0C</color>
+    <color name="orange_2">#FF3D2410</color>
+    <color name="orange_3">#FF5A3316</color>
+    <color name="orange_4">#FF7A451E</color>
+    <color name="orange_5">#FF9E5826</color>
+    <color name="orange_6">#FFB86A2F</color>
+    <color name="orange_7">#FFD17F3F</color>
+    <color name="orange_8">#FFFFB74D</color>
+    <color name="orange_9">#FFFFE0B2</color>
+
+    <!-- Green (dark theme) -->
+    <color name="green_0">#FF0F1A10</color>
+    <color name="green_1">#FF142A16</color>
+    <color name="green_2">#FF1A3D1E</color>
+    <color name="green_3">#FF225A28</color>
+    <color name="green_4">#FF2E7A34</color>
+    <color name="green_5">#FF3A9E42</color>
+    <color name="green_6">#FF4AB854</color>
+    <color name="green_7">#FF66BB6A</color>
+    <color name="green_8">#FF81C784</color>
+    <color name="green_9">#FFC8E6C9</color>
+
+    <!-- Blue (dark theme) -->
+    <color name="blue_0">#FF0A101A</color>
+    <color name="blue_1">#FF0F182A</color>
+    <color name="blue_2">#FF14223D</color>
+    <color name="blue_3">#FF1A325A</color>
+    <color name="blue_4">#FF21457A</color>
+    <color name="blue_5">#FF29589E</color>
+    <color name="blue_6">#FF336BB8</color>
+    <color name="blue_7">#FF4285D1</color>
+    <color name="blue_8">#FF64B5F6</color>
+    <color name="blue_9">#FFBBDEFB</color>
+
+    <!-- Purple (dark theme) -->
+    <color name="purple_0">#FF140F1A</color>
+    <color name="purple_1">#FF1E142A</color>
+    <color name="purple_2">#FF2A1A3D</color>
+    <color name="purple_3">#FF3D225A</color>
+    <color name="purple_4">#FF522A7A</color>
+    <color name="purple_5">#FF68359E</color>
+    <color name="purple_6">#FF7E42B8</color>
+    <color name="purple_7">#FF9C5AD1</color>
+    <color name="purple_8">#FFBA68C8</color>
+    <color name="purple_9">#FFE1BEE7</color>
+
+    <!-- Grey (dark theme) -->
+    <color name="grey_0">#FF121212</color>
+    <color name="grey_1">#FF1E1E1E</color>
+    <color name="grey_2">#FF2A2A2A</color>
+    <color name="grey_3">#FF383838</color>
+    <color name="grey_4">#FF484848</color>
+    <color name="grey_5">#FF616161</color>
+    <color name="grey_6">#FF757575</color>
+    <color name="grey_7">#FF9E9E9E</color>
+    <color name="grey_8">#FFBDBDBD</color>
+    <color name="grey_9">#FFE0E0E0</color>
+</resources>

@@ -35,16 +35,15 @@ class CategoryDetailViewModel @Inject constructor(
     private var activeCategory: StorageCategory? = null
     private var scanInFlight: Boolean = false
 
-    private var postSystemDeleteDirect: List<JunkFileItem>? = null
-    private var pendingSystemDeleteBatches: ArrayDeque<List<JunkFileItem>> = ArrayDeque()
-    private var systemDeleteLauncher: ((PendingIntent) -> Unit)? = null
-    private var deleteFlowInFlight: Boolean = false
+    private val cleanup = com.sunilshetty.clearspace.ui.components.CleanupController()
+    private var deleteFlowInFlight = false
+    private var pendingMessage: String? = null
 
     fun loadCategory(category: StorageCategory, force: Boolean = false) {
         if (!force && activeCategory == category && _uiState.value is CategoryDetailUiState.Ready) {
             return
         }
-        if (scanInFlight) return
+        if (scanInFlight || deleteFlowInFlight) return
 
         activeCategory = category
         val accessGranted = hasJunkReadAccess(context)
@@ -60,7 +59,7 @@ class CategoryDetailViewModel @Inject constructor(
                     selectedKeys = emptySet(),
                     selectedBytes = 0L,
                     isDeleting = false,
-                    message = null,
+                    message = pendingMessage.also { pendingMessage = null },
                     needsStorageAccess = true,
                 )
                 scanInFlight = false
@@ -78,7 +77,7 @@ class CategoryDetailViewModel @Inject constructor(
                     selectedKeys = emptySet(),
                     selectedBytes = 0L,
                     isDeleting = false,
-                    message = null,
+                    message = pendingMessage.also { pendingMessage = null },
                     needsStorageAccess = false,
                 )
             }.onFailure {
@@ -124,98 +123,30 @@ class CategoryDetailViewModel @Inject constructor(
     fun runDeleteSelected(launchSystemDelete: (PendingIntent) -> Unit) {
         val ready = _uiState.value as? CategoryDetailUiState.Ready ?: return
         if (ready.selectedKeys.isEmpty() || ready.isDeleting || deleteFlowInFlight) return
-
-        val index = buildCategoryMediaIndex(ready.items)
-        val locationLabel = ready.category.mediaLocationLabel()
-        _uiState.value = ready.copy(isDeleting = true, message = null)
-        systemDeleteLauncher = launchSystemDelete
+        val items = ready.items.filter { it.selectionKey in ready.selectedKeys }.map { it.toJunkFileItem(ready.category.mediaLocationLabel()) }
         deleteFlowInFlight = true
-
+        _uiState.value = ready.copy(isDeleting = true, message = null)
         viewModelScope.launch {
-            val selectedItems = withContext(Dispatchers.Default) {
-                ready.selectedKeys.mapNotNull { key ->
-                    index[key]?.toJunkFileItem(locationLabel)
+            try {
+                val deleted = cleanup.clean(items, categoryMediaRepository::planDelete,
+                    categoryMediaRepository::createDeleteRequest, categoryMediaRepository::deleteSelected, launchSystemDelete)
+                pendingMessage = context.getString(R.string.cleanup_result, deleted, items.size)
+                if (deleted == items.size && deleted > 0) {
+                    showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
                 }
-            }
-            val plan = withContext(Dispatchers.Default) {
-                categoryMediaRepository.planDelete(selectedItems)
-            }
-            postSystemDeleteDirect = plan.directDelete.takeIf { it.isNotEmpty() }
-            pendingSystemDeleteBatches = ArrayDeque(plan.systemPromptBatches)
-
-            if (pendingSystemDeleteBatches.isNotEmpty()) {
-                startNextSystemDeleteBatch(ready.category)
-            } else {
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                pendingMessage = context.getString(R.string.cleanup_failed)
+            } finally {
                 deleteFlowInFlight = false
-                systemDeleteLauncher = null
-                postSystemDeleteDirect = null
-                deleteWithoutSystemPrompt(selectedItems, ready.category)
             }
+            loadCategory(ready.category, force = true)
         }
     }
 
     fun onDeleteFinished(category: StorageCategory, success: Boolean) {
-        if (success && pendingSystemDeleteBatches.isNotEmpty()) {
-            startNextSystemDeleteBatch(category)
-            return
-        }
-        val followUp = postSystemDeleteDirect
-        postSystemDeleteDirect = null
-        pendingSystemDeleteBatches.clear()
-        systemDeleteLauncher = null
-        deleteFlowInFlight = false
-
-        if (success) {
-            showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
-            if (!followUp.isNullOrEmpty()) {
-                viewModelScope.launch {
-                    withContext(Dispatchers.IO) {
-                        categoryMediaRepository.deleteSelected(followUp)
-                    }
-                    loadCategory(category, force = true)
-                }
-            } else {
-                loadCategory(category, force = true)
-            }
-        } else {
-            val current = _uiState.value as? CategoryDetailUiState.Ready ?: return
-            _uiState.value = current.copy(
-                isDeleting = false,
-                message = context.getString(R.string.category_detail_error_delete),
-            )
-        }
-    }
-
-    private fun startNextSystemDeleteBatch(category: StorageCategory) {
-        viewModelScope.launch {
-            val launcher = systemDeleteLauncher
-            val batch = pendingSystemDeleteBatches.removeFirstOrNull()
-            if (batch == null || launcher == null) {
-                deleteFlowInFlight = false
-                onDeleteFinished(category, success = true)
-                return@launch
-            }
-            val pending = withContext(Dispatchers.IO) {
-                categoryMediaRepository.createDeleteRequest(batch)
-            }
-            if (pending != null) {
-                deleteFlowInFlight = false
-                launcher(pending)
-            } else {
-                postSystemDeleteDirect = (postSystemDeleteDirect.orEmpty() + batch).distinctBy { it.selectionKey }
-                startNextSystemDeleteBatch(category)
-            }
-        }
-    }
-
-    private fun deleteWithoutSystemPrompt(items: List<JunkFileItem>, category: StorageCategory) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                categoryMediaRepository.deleteSelected(items)
-            }
-            showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
-            loadCategory(category, force = true)
-        }
+        cleanup.onApproval(success)
     }
 
     private fun CategoryDetailUiState.Ready.withSelection(

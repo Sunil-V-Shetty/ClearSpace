@@ -24,6 +24,7 @@ class TrashViewModel @Inject constructor(
     val uiState: StateFlow<TrashUiState> = _uiState.asStateFlow()
 
     private val _deleteCelebrationVisible = MutableStateFlow(false)
+    private var operationMessage: String? = null
     val deleteCelebrationVisible: StateFlow<Boolean> = _deleteCelebrationVisible.asStateFlow()
 
     init {
@@ -36,7 +37,7 @@ class TrashViewModel @Inject constructor(
 
     fun loadTrash(force: Boolean = false) {
         val current = _uiState.value
-        if (!force && current is TrashUiState.Ready && !current.isWorking) return
+        if (!force && current is TrashUiState.Ready) return
 
         viewModelScope.launch {
             val showFullScreenLoading = force || current !is TrashUiState.Ready
@@ -52,7 +53,7 @@ class TrashViewModel @Inject constructor(
                     items = items,
                     selectedKeys = selectedKeys,
                     isWorking = false,
-                    message = null,
+                    message = operationMessage.also { operationMessage = null },
                 )
             }.onFailure {
                 _uiState.value = TrashUiState.Error(
@@ -100,7 +101,8 @@ class TrashViewModel @Inject constructor(
                         message = context.getString(R.string.trash_error_restore),
                     )
                 } else {
-                    showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
+                    if (count == ready.selectedKeys.size) showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
+                    operationMessage = "Restored $count of ${ready.selectedKeys.size} selected files."
                     loadTrash(force = true)
                 }
             }.onFailure {
@@ -121,8 +123,9 @@ class TrashViewModel @Inject constructor(
             _uiState.value = ready.copy(isWorking = true, message = null)
             runCatching {
                 trashRepository.deleteForever(ready.selectedKeys)
-            }.onSuccess {
-                showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
+            }.onSuccess { count ->
+                if (count == ready.selectedKeys.size) showDeleteCelebration(viewModelScope, _deleteCelebrationVisible)
+                operationMessage = "Deleted $count of ${ready.selectedKeys.size} copies forever."
                 loadTrash(force = true)
             }.onFailure {
                 val latest = _uiState.value as? TrashUiState.Ready ?: return@launch
